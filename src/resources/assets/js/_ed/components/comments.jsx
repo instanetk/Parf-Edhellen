@@ -95,11 +95,8 @@ class EDComments extends EDStatefulFormComponent {
         let posts = this.state.posts || [];
         const newPosts = response.data.posts || [];
 
-        // First, jump to the post that the client has explicitly specified,
-        // alternatively, when in ascending order, jump to the last comment 
-        // (this the comment with the largest ID).
-        const jumpPostId = this.state.jump_post_id || 
-            (! this.isInfiniteScroll() && newPosts.length ? newPosts[newPosts.length - 1].id : 0);
+        // First, jump to the post that the client has explicitly specified
+        const jumpPostId = this.state.jump_post_id || 0;
 
         if (fromId === 0 || posts.length < 1 || ! this.isInfiniteScroll()) {
             // reload -- start over from the beginning
@@ -323,6 +320,7 @@ class EDComments extends EDStatefulFormComponent {
         });
 
         this.load(pageNo);
+        window.scrollTo(0, 0); // top of page when navigating
     }
 
     renderUnauthorized() {

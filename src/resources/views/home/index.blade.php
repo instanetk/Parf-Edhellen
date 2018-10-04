@@ -56,6 +56,8 @@
       'sentenceData' => $sentenceData
     ])
     @endif
+
+    <div class="ed-ad ed-ad--home hidden-sm" data-ad-name="home"></div>
   </div>
   <hr class="hidden-md hidden-lg clear-left">
   <div class="col-xs-12 col-sm-12 col-md-4">

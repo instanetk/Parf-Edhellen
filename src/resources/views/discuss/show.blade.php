@@ -22,6 +22,7 @@
       ])
     </section>
   </article>
+  <div class="ed-ad ed-ad--discuss" data-ad-name="discuss"></div>
 @endsection
 @section('styles')
 <link rel="stylesheet" href="@assetpath(css/app.discuss.css)">
