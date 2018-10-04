@@ -91,3 +91,13 @@ export class HomeAd extends Ad {
         super(props, '6826878711');
     }
 }
+
+export class SentenceAd extends Ad {
+    static get name() {
+        return 'sentence';
+    }
+
+    constructor(props) {
+        super(props, '3237620511');
+    }
+}
