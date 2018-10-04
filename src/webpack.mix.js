@@ -76,6 +76,10 @@ mix.react([
     'resources/assets/js/_plugins-admin/index.jsx'
 ], `${outputDir}/js/global-plugins-admin.js`);
 
+mix.react([
+    'resources/assets/js/_plugins-ads/index.jsx'
+], `${outputDir}/js/global-plugins-ads.js`);
+
 mix.combine([
     'node_modules/glaemscribe/js/glaemscribe.js',
     'node_modules/glaemscribe/js/charsets/tengwar_ds_annatar.cst.js',
