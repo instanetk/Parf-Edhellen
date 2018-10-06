@@ -5,20 +5,22 @@ const IgnoreList = [
      * This particular exception is excluded as this is a third-party component, and not
      * something which would be raised by our code.
      */
-    'GoogleDocsResearchGsaProxy' 
+    'GoogleDocsResearchGsaProxy',
+    'document.getElementsByClassName.ToString', // Samsung Internet bug (https://github.com/SamsungInternet/support/issues/56)
+    'at <anonymous>:' // we do not have anonymous scripts, so this is probably an extension.
 ];
 
 (function () {
     const originalFunc = window.onerror;
 
-    window.onerror = function (message, url, lineNo, columnNo, error) {
+    window.onerror = function (message, source, lineNumber, columnNumber, error) {
         const string = message.toLowerCase();
         const disqualified = "script error";
 
         if (string.indexOf(disqualified) === -1) {
-            const message = `${message} (${navigator.appName} ${navigator.appVersion})`;
+            const message = `${message} (${source}:${lineNumber}:${columnNumber})`;
             const url = window.location.href;
-            const stack = error ? error.stack : '';
+            const stack = `${navigator.appName} ${navigator.appVersion}\n${error ? error.stack : ''}`;
             
             if (IgnoreList.every(ignore => stack.indexOf(ignore) === -1)) {
                 EDAPI.error(message, url, stack);
@@ -26,7 +28,7 @@ const IgnoreList = [
         }
 
         if (typeof originalFunc === 'function') {
-            originalFunc(message, url, lineNo, columnNo, error);
+            originalFunc(message, source, lineNumber, columnNumber, error);
         }
 
         return false;

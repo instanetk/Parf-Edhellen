@@ -42,5 +42,5 @@
     </div>
   </div>
 
-  <div class="ed-ad" data-ad-name="sentence"></div>
+  <div class="ed-ad ed-ad--sentence" data-ad-name="sentence"></div>
 @endsection

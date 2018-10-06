@@ -11,6 +11,8 @@
     @include('_shared._neologism', ['account' => $sentence->account])
   @endif
 
+<div class="ed-ad" data-ad-name="sentence"></div>
+
   <header>
     @include('sentence.public._header')
     <h2>{{ $sentence->name }}</h2>
