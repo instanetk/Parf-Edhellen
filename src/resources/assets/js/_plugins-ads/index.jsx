@@ -5,7 +5,9 @@ import ReactDOM from 'react-dom';
 
 const load = () => {
     EDConfig.addPlugins('book-gloss-section', [ ads.GlossSectionAd ]);
+};
 
+const loadAds = () => {
     const adContainers = document.querySelectorAll('.ed-ad');
     // Avoid using `forEach` since it is not compatible with older browsers.
     for (var i = 0; i < adContainers.length; i += 1) {
@@ -20,3 +22,4 @@ const load = () => {
 };
 
 load();
+window.setTimeout(loadAds, 50);
