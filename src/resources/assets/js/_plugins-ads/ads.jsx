@@ -35,13 +35,10 @@ export class Ad extends React.Component {
         this._observer = null;
     }
 
-    onResize(changes) {
-        const style = changes.find(c => c.attributeName === 'style');
-        if (!style) {
-            return;
-        }
-
-        const visible = this._ad.offsetHeight >= AdMinimumHeight;
+    onResize() {
+        const computedStyle = getComputedStyle(this._ad);
+        const visible = this._ad.offsetHeight >= AdMinimumHeight &&
+            computedStyle.display !== 'none';
         this._adContainer.style.visibility = visible ? '' : 'hidden';
     }
 
@@ -99,5 +96,15 @@ export class SentenceAd extends Ad {
 
     constructor(props) {
         super(props, '3237620511');
+    }
+}
+
+export class FlashcardAd extends Ad {
+    static get name() {
+        return 'flashcard';
+    }
+
+    constructor(props) {
+        super(props, '3964210950');
     }
 }
