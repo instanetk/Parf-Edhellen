@@ -85,7 +85,7 @@ export class HomeAd extends Ad {
     }
 
     constructor(props) {
-        super(props, '6826878711');
+        super(props, '6826878711', 'auto');
     }
 }
 
@@ -95,7 +95,7 @@ export class SentenceAd extends Ad {
     }
 
     constructor(props) {
-        super(props, '3237620511');
+        super(props, '3237620511', 'auto');
     }
 }
 
@@ -105,6 +105,6 @@ export class FlashcardAd extends Ad {
     }
 
     constructor(props) {
-        super(props, '3964210950');
+        super(props, '3964210950', 'auto');
     }
 }
