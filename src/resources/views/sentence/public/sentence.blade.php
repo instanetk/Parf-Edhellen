@@ -11,8 +11,6 @@
     @include('_shared._neologism', ['account' => $sentence->account])
   @endif
 
-<div class="ed-ad" data-ad-name="sentence"></div>
-
   <header>
     @include('sentence.public._header')
     <h2>{{ $sentence->name }}</h2>
@@ -29,6 +27,8 @@
     @markdown($sentence->long_description)
   </div>
   @endif
+
+  <div class="ed-ad" data-ad-name="sentence"></div>
 
   <div id="ed-fragment-navigator"></div>
   <script type="application/json" id="ed-preload-sentence-data">{!! json_encode($sentenceData) !!}</script>
