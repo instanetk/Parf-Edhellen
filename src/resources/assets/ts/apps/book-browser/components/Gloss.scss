@@ -16,7 +16,7 @@ blockquote.gloss {
       .label {
         font-size: 0.8rem;
         font-family: $font-family-tiny;
-        background-color: $brand-danger;
+        background-color: $danger;
         margin-left: 0.85rem;
         vertical-align: middle;
       }
@@ -75,7 +75,7 @@ blockquote.gloss {
     overflow: hidden;
   }
   section.details {
-    padding: $padding-small-vertical 0;
+    // padding: $padding-small-vertical 0;
 
     header > h4 {
       margin-top: 0;

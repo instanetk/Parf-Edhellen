@@ -1,6 +1,6 @@
 @import '../_scss/_variables';
 
-@media (max-width: $screen-sm-min) {
+@include respond-below(sm) {
     .Dialog--footer {
         > .btn + .btn {
             margin: 0;

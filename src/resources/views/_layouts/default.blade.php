@@ -23,103 +23,90 @@
   <noscript><style type="text/css">.noscript--hidden{display:none;}</style></noscript>
 </head>
 <body class="{{ $isAdmin ? 'ed-admin' : ($isAdmin === false ? 'ed-user' : 'ed-anonymous') }}" data-account-id="{{ $user ? $user->id : '0' }}" data-v="{{ config('ed.version') }}">
-  <div class="head-content">
-    <aside class="navbar navbar-default navbar-static-top" role="navigation">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-            <span class="sr-only">@lang('home.menu.open')</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">{{ config('ed.title') }}</a>
-        </div>
-        <div class="navbar-collapse collapse">
-          <ul class="nav navbar-nav">
-            <li class="{{ active('home') }}"><a href="/">@lang('home.title')</a></li>
-            <li class="{{ active('about') }}"><a href="{{ route('about') }}">@lang('about.title')</a></li>
-            <li class="{{ active(['sentence.public', 'sentence.public.language', 'sentence.public.sentence']) }}"><a href="{{ route('sentence.public') }}">@lang('sentence.title')</a></li>
-            <li class="{{ active(['flashcard', 'flashcard.cards']) }}"><a href="{{ route('flashcard') }}">@lang('flashcard.title')</a></li>
-            <li class="{{ active(['discuss.index', 'discuss.group', 'discuss.show', 'discuss.member-list']) }}">
-              <a href="{{ route('discuss.index') }}">@lang('discuss.title')</a>
-            </li>
-          </ul>
-          <ul class="nav navbar-nav navbar-right">
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">
-                @if ($user)
-                  {{ $user->nickname }}
-                @else
-                  @lang('discuss.community.title')
-                @endif
-                <span class="caret"></span>
-              </a>
-              <ul class="dropdown-menu">
-                @if ($user)
-                <li class="{{ active('author.my-profile') }}">
-                  <a href="{{ route('author.my-profile') }}">
-                    <span class="glyphicon glyphicon-user"></span> 
-                    &nbsp;@lang('discuss.community.profile')
-                  </a>
-                </li>
-                <li class="{{ active('dashboard') }}">
-                  <a href="{{ route('dashboard') }}">
-                    <span class="glyphicon glyphicon-dashboard"></span> 
-                    &nbsp;@lang('dashboard.title')
-                  </a>
-                </li>
-                <li>
-                  <a href="{{ route('logout') }}">
-                    <span class="glyphicon glyphicon-log-out"></span> 
-                    &nbsp;@lang('dashboard.logout')
-                  </a>
-                </li>
-                @else
-                <li class="{{ active('login') }}">
-                  <a href="{{ route('login') }}">
-                    <span class="glyphicon glyphicon-log-in"></span> 
-                    &nbsp;@lang('dashboard.login')
-                  </a>
-                </li>
-                <li>
-                  <a href="{{ route('login') }}">
-                    <span class="glyphicon glyphicon-user"></span> 
-                    &nbsp;@lang('dashboard.register')
-                  </a>
-                </li>
-                @endif
-                <li class="divider" role="separator"></li>
-                <li class="{{ active('discuss.members') }}">
-                  <a href="{{ route('discuss.members') }}">
-                    @lang('discuss.member-list.title')
-                  </a>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </div><!--/.nav-collapse -->
-      </div><!--/.container-fluid -->
-    </aside>
+  <!-- navigation -->
+  <nav class="navbar navbar-dark bg-dark navbar-expand-lg">
+    <a class="navbar-brand" href="/">{{ config('ed.title') }}</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <ul class="nav navbar-nav">
+        <li class="nav-item {{ active('home') }}">
+          <a class="nav-link" href="/">@lang('home.title')</a>
+        </li>
+        <li class="nav-item {{ active('about') }}">
+          <a class="nav-link" href="{{ route('about') }}">@lang('about.title')</a>
+        </li>
+        <li class="nav-item {{ active(['sentence.public', 'sentence.public.language', 'sentence.public.sentence']) }}">
+          <a class="nav-link" href="{{ route('sentence.public') }}">@lang('sentence.title')</a>
+        </li>
+        <li class="nav-item {{ active(['flashcard', 'flashcard.cards']) }}">
+          <a class="nav-link" href="{{ route('flashcard') }}">@lang('flashcard.title')</a>
+        </li>
+        <li class="nav-item {{ active(['discuss.index', 'discuss.group', 'discuss.show', 'discuss.member-list']) }}">
+          <a class="nav-link" href="nav-item {{ route('discuss.index') }}">@lang('discuss.title')</a>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li class="nav-item dropdown">
+          <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button">
+            @if ($user)
+              {{ $user->nickname }}
+            @else
+              @lang('discuss.community.title')
+            @endif
+            <span class="caret"></span>
+          </a>
+          <div class="dropdown-menu">
+            @if ($user)
+            <a class="dropdown-item {{ active('author.my-profile') }}" href="{{ route('author.my-profile') }}">
+              <span class="glyphicon glyphicon-user"></span> 
+              &nbsp;@lang('discuss.community.profile')
+            </a>
+            <a class="dropdown-item {{ active('dashboard') }}" href="{{ route('dashboard') }}">
+              <span class="glyphicon glyphicon-dashboard"></span> 
+              &nbsp;@lang('dashboard.title')
+            </a>
+            <a class="dropdown-item" href="{{ route('logout') }}">
+              <span class="glyphicon glyphicon-log-out"></span> 
+              &nbsp;@lang('dashboard.logout')
+            </a>
+            @else
+            <a class="dropdown-item {{ active('login') }}" href="{{ route('login') }}">
+              <span class="glyphicon glyphicon-log-in"></span> 
+              &nbsp;@lang('dashboard.login')
+            </a>
+            <a href="dropdown-item {{ route('login') }}">
+              <span class="glyphicon glyphicon-user"></span> 
+              &nbsp;@lang('dashboard.register')
+            </a>
+            @endif
+            <a class="dropdown-item {{ active('discuss.members') }}" href="{{ route('discuss.members') }}">
+              @lang('discuss.member-list.title')
+            </a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <!-- /navigation -->
+  <main class="container">
+    <!-- scripting disabled warning -->
+    <noscript>
+      <div id="noscript" class="alert alert-danger">
+        <strong><span class="glyphicon glyphicon-flag" aria-hidden="true"></span> @lang('home.noscript.title')</strong>
+        <p>@lang('home.noscript.message', ['website' => config('ed.title')])</p>
+        <p><a href="https://support.google.com/bin/answer.py?hl=en&amp;answer=23852" target="_blank">@lang('home.noscript.call-to-action')</a>.</p>
+      </div>
+    </noscript>
 
-    <main class="container" id="site-container">
-      <!-- scripting disabled warning -->
-      <noscript>
-        <div id="noscript" class="alert alert-danger">
-          <strong><span class="glyphicon glyphicon-flag" aria-hidden="true"></span> @lang('home.noscript.title')</strong>
-          <p>@lang('home.noscript.message', ['website' => config('ed.title')])</p>
-          <p><a href="https://support.google.com/bin/answer.py?hl=en&amp;answer=23852" target="_blank">@lang('home.noscript.call-to-action')</a>.</p>
-        </div>
-      </noscript>
+    <!-- search component -->
+    <div id="ed-search-component"></div>
 
-      <!-- search component -->
-      <div id="ed-search-component"></div>
-
-      <!-- begin content -->
-      @yield('body')
-    </main>
-  </div>
-  <footer>
+    <!-- begin content -->
+    @yield('body')
+  </main>
+  <footer class="footer bg-dark mt-auto py-3">
     <section>
       <h3>{{ config('ed.title') }}</h3>
       <nav>

@@ -1,7 +1,7 @@
 @import './_variables';
 
 .link-blocks {
-  @media (min-width: $screen-sm-min) {
+  @include respond-above(sm) {
     columns: 2;
   }
 
@@ -9,7 +9,7 @@
     page-break-inside: avoid;
     
     &:hover {
-      background: $alert-info-bg;
+      background: $info;
       border-radius: 5px;
     }
   
@@ -20,7 +20,7 @@
 
       .label {
         float: right;
-        font-family: $font-family-tiny;
+        // font-family: $font-family-tiny;
       }
     }
   

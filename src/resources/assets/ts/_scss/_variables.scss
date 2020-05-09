@@ -1,3 +1,4 @@
+/*
 // Body
 $body-bg: #f5f8fa;
 
@@ -16,8 +17,6 @@ $icon-font-path: "~bootstrap-sass/assets/fonts/bootstrap/";
 // - Georgia: compatible with everything except Linux
 // - Bitstream Charter, Charis SIL, Utopia, URW Bookman L: Linux compatibility
 // - serif: fallback
-$font-family-sans-serif: "Iowan Old Style", Georgia, "Bitstream Charter", "Charis SIL", Utopia, "URW Bookman L", serif;
-$font-family-tiny: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 $font-size-base: 14px;
 $line-height-base: 1.6;
 $text-color: #202020;
@@ -45,5 +44,57 @@ $screen-xxl-width: 1700px;
 $screen-xxxl-width: 2200px;
 
 $footer-height: 150px;
+*/
 
-@import 'node_modules/bootstrap-sass/assets/stylesheets/bootstrap/_variables';
+
+// Respond above.
+@mixin respond-above($breakpoint) {
+
+  // If the breakpoint exists in the map.
+  @if map-has-key($grid-breakpoints, $breakpoint) {
+
+    // Get the breakpoint value.
+    $breakpoint-value: map-get($grid-breakpoints, $breakpoint);
+
+    // Write the media query.
+    @media (min-width: $breakpoint-value) {
+      @content;
+    }
+
+  // If the breakpoint doesn't exist in the map.
+  } @else {
+
+    // Log a warning.
+    @warn 'Invalid breakpoint: #{$breakpoint}.';
+  }
+}
+
+
+
+@mixin respond-below($breakpoint) {
+
+  // If the breakpoint exists in the map.
+  @if map-has-key($grid-breakpoints, $breakpoint) {
+
+    // Get the breakpoint value.
+    $breakpoint-value: map-get($grid-breakpoints, $breakpoint);
+
+    // Write the media query.
+    @media (max-width: ($breakpoint-value - 1)) {
+      @content;
+    }
+
+  // If the breakpoint doesn't exist in the map.
+  } @else {
+
+    // Log a warning.
+    @warn 'Invalid breakpoint: #{$breakpoint}.';
+  }
+}
+
+$font-family-sans-serif: "Iowan Old Style", Georgia, "Bitstream Charter", "Charis SIL", Utopia, "URW Bookman L", serif;
+$font-family-tiny: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+
+@import "node_modules/bootstrap/scss/functions";
+@import "node_modules/bootstrap/scss/variables";
+@import "node_modules/bootstrap/scss/mixins";

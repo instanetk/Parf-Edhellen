@@ -109,7 +109,7 @@
     margin-top: 2em;
 }
 
-@media (min-width: $screen-sm-min) {
+@include respond-above(sm) {
     .flashcard-container {
         display: flex;
 

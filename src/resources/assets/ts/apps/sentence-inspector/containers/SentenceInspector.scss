@@ -47,7 +47,7 @@
         }
     }
 
-    @media (min-width: $screen-md-min) {
+    @include respond-above(md) {
         > .p-group {
             display: flex;
             padding-bottom: 0;
