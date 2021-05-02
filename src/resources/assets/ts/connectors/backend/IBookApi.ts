@@ -16,9 +16,16 @@ export interface IFindEntity {
     ok: string;
 }
 
-export type FindResponse = IFindEntity[];
+export interface ISearchGroups {
+    [groupId: number]: string;
+}
 
-export interface IGlossaryRequest {
+export interface IFindResponse {
+    keywords: IFindEntity[];
+    searchGroups: ISearchGroups;
+}
+
+export interface IEntitiesRequestData {
     glossGroupIds?: number[];
     includeOld: boolean;
     inflections?: boolean;
@@ -28,15 +35,13 @@ export interface IGlossaryRequest {
     word: string;
 }
 
-export interface IGlossaryResponse {
+export interface IGlossaryResponse<T = IBookGlossEntity> {
     languages: ILanguageEntity[] | null;
     sections: {
-        glosses: IBookGlossEntity[];
+        entities: T[];
         language: ILanguageEntity;
     }[];
     sense: number[];
-    single: boolean;
-    word: string;
 }
 
 export interface ILanguagesResponse {
@@ -151,6 +156,7 @@ export interface ISentenceEntity {
     isNeologism?: boolean;
     language?: ILanguageEntity;
     languageId?: number;
+    linkHref?: string;
     longDescription?: string;
     name?: string;
     source?: string;
@@ -227,10 +233,22 @@ export interface ISpeechMap {
     [speechId: string]: string;
 }
 
+export interface IEntitiesRequest {
+    data: IEntitiesRequestData;
+    groupId: number;
+}
+
+export interface IEntitiesResponse<T> {
+    entities: T;
+    groupId: number;
+    single: boolean;
+    word: string;
+}
+
 export default interface IBookApi {
-    find(args: IFindRequest): Promise<FindResponse>;
+    entities<T = IGlossaryResponse>(args: IEntitiesRequest): Promise<IEntitiesResponse<T>>;
+    find(args: IFindRequest): Promise<IFindResponse>;
     gloss(id: number): Promise<IGlossaryResponse>;
-    glossary(args: IGlossaryRequest): Promise<IGlossaryResponse>;
     groups(): Promise<IGlossGroup[]>;
     languages(): Promise<ILanguagesResponse>;
     sentence(args: ISentenceRequest): Promise<ISentenceResponse>;

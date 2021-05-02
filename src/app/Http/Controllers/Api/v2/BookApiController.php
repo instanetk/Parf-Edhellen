@@ -5,27 +5,20 @@ namespace App\Http\Controllers\Api\v2;
 use Illuminate\Http\Request;
 use Cache;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Abstracts\BookBaseController;
 use App\Helpers\StringHelper;
+use App\Repositories\ValueObjects\SearchIndexSearchValue;
 use App\Models\{
     Keyword,
-    Gloss, 
-    GlossGroup, 
+    Gloss,
+    GlossGroup,
     Language,
+    SearchKeyword,
     Word
 };
-use App\Http\Controllers\Traits\{
-    CanTranslate, 
-    CanGetGloss 
-};
 
-class BookApiController extends Controller 
+class BookApiController extends BookBaseController
 {
-    use CanTranslate, CanGetGloss { 
-        CanTranslate::__construct insteadof CanGetGloss;
-        CanTranslate::translate as protected doTranslate; 
-    } // ;
-
     /**
      * HTTP GET. Gets the word which corresponds to the specified ID. 
      *
@@ -45,7 +38,7 @@ class BookApiController extends Controller
 
     public function getLanguages()
     {
-        $languages = Cache::remember('ed.languages', 60 * 60 /* seconds */, function () {
+        $languages = Cache::remember('ed.languages', 60 * 60 /* = 1 hour */, function () {
             return Language::all()
                 ->sortBy('order')
                 ->sortBy('name')
@@ -100,42 +93,43 @@ class BookApiController extends Controller
      */
     public function find(Request $request)
     {
-        $this->validateBasicRequest($request, [
-            'reversed' => 'boolean'
-        ]);
+        $v = $this->validateFindRequest($request);
+        $keywords = $this->_searchIndexRepository->findKeywords($v);
 
-        $glossGroupIds = $request->has('gloss_group_ids') ? $request->input('gloss_group_ids') : null;
-        $includeOld    = boolval($request->input('include_old'));
-        $languageId    = intval($request->input('language_id'));
-        $reversed      = $request->input('reversed') === true;
-        $speechIds     = $request->has('speech_ids') ? $request->input('speech_ids') : null;
-        $word          = StringHelper::normalize( $request->input('word'), /* accentsMatter: */ false, /* retainWildcard: */ true );
+        // Create a key-value pair that maps group ID (integers) to a human readable, internationalized format.
+        $locale = $request->getLocale();
+        $searchGroups = Cache::remember('ed.search-groups.'.$locale, 60 * 60 /* = 1 hour */, function () {
+            $config   = config('ed.book_entities');
+            $entities = array_values($config);
+            return array_reduce($entities, function ($carry, $entity) {
+                $carry[intval($entity['group_id'])] = __('entities.'.$entity['intl_name']);
+                return $carry;
+            }, []);
+        });
 
-        $keywords = $this->_glossRepository->getKeywordsForLanguage($word, $reversed, $languageId, $includeOld,
-            $speechIds, $glossGroupIds);
-        return $keywords;
+        return [
+            'keywords'      => $keywords,
+            'search_groups' => $searchGroups
+        ];
     }
 
     /**
-     * HTTP POST. Translates the specified word.
-     *
-     * @param Request $request
-     * @return void
+     * HTTP POST. Finds entitites corresponding to a specified keyword.
      */
-    public function translate(Request $request)
+    public function entities(Request $request, int $groupId)
     {
-        $this->validateBasicRequest($request, [
-            'inflections' => 'sometimes|boolean'
-        ]);
+        $v = $this->validateFindRequest($request);
 
-        $glossGroupIds = $request->has('gloss_group_ids') ? $request->input('gloss_group_ids') : null;
-        $includeOld = $request->has('include_old') ? boolval($request->input('include_old')) : true;
-        $inflections = $request->has('inflections') && $request->input('inflections');
-        $languageId = $request->has('language_id') ? intval($request->input('language_id')) : 0;
-        $speechIds = $request->has('speech_ids') ? $request->input('speech_ids') : null;
-        $word = StringHelper::normalize( $request->input('word') );
-
-        return $this->doTranslate($word, $languageId, $inflections, $includeOld, $speechIds, $glossGroupIds);
+        $cacheKey = 'ed.entities.'.md5(json_encode($v));
+        $entities = Cache::get($cacheKey);
+        if ($entities === null) {
+            $entities = $this->_searchIndexRepository->resolveIndexToEntities($groupId, $v);
+            if (is_array($entities) && ! empty($entities['entities'])) {
+                Cache::put($cacheKey, $entities, 60 * 60 /* 1 hour */);
+            }
+        }
+        
+        return $entities;
     }
 
     /**
@@ -153,13 +147,5 @@ class BookApiController extends Controller
         }
 
         return $gloss;
-    }
-
-    private function validateBasicRequest(Request $request, array $additional = [])
-    {
-        $this->validateGetGlossConfiguration($request);
-        $this->validate($request, $additional + [
-            'word' => 'required|min:1|max:255',
-        ]);
     }
 }

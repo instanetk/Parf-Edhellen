@@ -5,18 +5,20 @@ import {
 } from 'enzyme';
 import React from 'react';
 
-import { IGlossaryResponse } from '@root/connectors/backend/IBookApi';
+import { IEntitiesResponse } from '@root/connectors/backend/IBookApi';
 import { snakeCasePropsToCamelCase } from '@root/utilities/func/snake-case';
-import GlossaryReducer from '../reducers/GlossaryReducer';
-import { IGlossaryState } from '../reducers/GlossaryReducer._types';
-import GlossesReducer from '../reducers/GlossesReducer';
-import { IGlossesState } from '../reducers/GlossesReducer._types';
-import { ILanguagesState } from '../reducers/LanguagesReducer._types';
-import { Glossary } from './Glossary';
+import { Actions } from '../../actions';
+import {
+    IEntitiesState,
+} from '../../reducers/EntitiesReducer._types';
+import EntitiesReducer from '../../reducers/EntitiesReducer';
+import SectionsReducer from '../../reducers/SectionsReducer';
+import { ISectionsState } from '../../reducers/SectionsReducer._types';
+import { ILanguagesState } from '../../reducers/LanguagesReducer._types';
+import LanguagesReducer from '../../reducers/LanguagesReducer';
+import GlossaryEntities from './GlossaryEntities';
 
 import '@root/utilities/Enzyme';
-import { Actions } from '../actions';
-import LanguagesReducer from '../reducers/LanguagesReducer';
 
 // Define node `require` for synchronous file loading
 declare var require: any;
@@ -24,24 +26,24 @@ declare var require: any;
 describe('apps/book-browser/containers/Glossary', () => {
     let wrapper: ReactWrapper;
 
-    let glossary: IGlossaryState;
-    let glosses: IGlossesState;
+    let glossary: IEntitiesState;
+    let sections: ISectionsState;
     let languages: ILanguagesState;
 
     before(() => {
-        const testData = snakeCasePropsToCamelCase<IGlossaryResponse>(
-            require('./Glossary._spec.glossary'),
+        const testData = snakeCasePropsToCamelCase<IEntitiesResponse<any>>(
+            require('./GlossaryEntities._spec.glossary'),
         );
-        const action = {
-            glossary: testData,
-            type: Actions.ReceiveGlossary,
+        const action: any = {
+            ...testData,
+            type: Actions.ReceiveEntities,
         };
-        glossary = GlossaryReducer(null, action);
-        glosses = GlossesReducer(null, action);
+        glossary = EntitiesReducer(null, action);
+        sections = SectionsReducer(null, action);
         languages = LanguagesReducer(null, action);
 
-        wrapper = mount(<Glossary
-            glosses={glosses}
+        wrapper = mount(<GlossaryEntities
+            sections={sections}
             isEmpty={false}
             languages={languages.common}
             loading={false}

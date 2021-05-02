@@ -1,37 +1,37 @@
 import React from 'react';
 
-import { connect } from 'react-redux';
 import { Waypoint } from 'react-waypoint';
 
 import { IComponentEvent } from '@root/components/Component._types';
 import { IReferenceLinkClickDetails } from '@root/components/HtmlInject._types';
-import Spinner from '@root/components/Spinner';
 import { ILanguageEntity } from '@root/connectors/backend/IBookApi';
 import GlobalEventConnector from '@root/connectors/GlobalEventConnector';
-import { snakeCasePropsToCamelCase } from '@root/utilities/func/snake-case';
 import { makeVisibleInViewport } from '@root/utilities/func/visual-focus';
 
-import { SearchActions } from '../actions';
-import { IBrowserHistoryState } from '../actions/SearchActions._types';
-import Language from '../components/Language';
-import { RootReducer } from '../reducers';
-import { IProps, IState } from './Glossary._types';
+import { SearchActions } from '../../actions';
+import { IBrowserHistoryState } from '../../actions/SearchActions._types';
+import { IEntitiesComponentProps } from '../../containers/Entities._types';
+import { IState } from './GlossaryEntities._types';
+import GlossaryLanguage from './GlossaryLanguage';
+import LoadingIndicator from '../LoadingIndicator';
 
-import './Glossary.scss';
+import './GlossaryEntities.scss';
 
-export class Glossary extends React.Component<IProps, IState> {
+export default class GlossaryEntities extends React.Component<IEntitiesComponentProps, IState> {
     public state: IState = {
         notifyLoaded: true,
     };
 
-    private _glossaryContainerRef: HTMLDivElement;
+    private _glossaryContainerRef: React.RefObject<HTMLDivElement>;
     private _actions = new SearchActions();
     private _globalEvents = new GlobalEventConnector();
 
-    public componentDidMount() {
-        this._initializePreloadedGlossary();
-        this._removeGlossaryForBots();
+    constructor(props: IEntitiesComponentProps) {
+        super(props);
+        this._glossaryContainerRef = React.createRef<HTMLDivElement>();
+    }
 
+    public componentDidMount() {
         // Subscribe to the global event `loadReference` which occurs when the customer clicks
         // a reference link in any component not associated with the Glossary app.
         this._globalEvents.loadReference = this._onGlobalListenerReferenceLoad;
@@ -44,7 +44,7 @@ export class Glossary extends React.Component<IProps, IState> {
     }
 
     public render() {
-        return <div className="ed-glossary-container" ref={this._setGlossaryContainerRef}>
+        return <div className="ed-glossary-container" ref={this._glossaryContainerRef}>
             {this._renderViews()}
         </div>;
     }
@@ -57,7 +57,7 @@ export class Glossary extends React.Component<IProps, IState> {
         } = this.props;
 
         if (loading) {
-            return <Spinner />;
+            return this._renderLoading();
         }
 
         if (!word || word.length < 1) {
@@ -69,6 +69,17 @@ export class Glossary extends React.Component<IProps, IState> {
         }
 
         return this._renderDictionary();
+    }
+
+    private _renderLoading() {
+        const lastHeight = this._glossaryContainerRef.current?.offsetHeight || 500;
+        const heightStyle = {
+            minHeight: `${lastHeight}px`,
+        };
+
+        return <div style={heightStyle}>
+            <LoadingIndicator text="Retrieving glossary..." />
+        </div>;
     }
 
     private _renderEmptyDictionary() {
@@ -121,72 +132,10 @@ export class Glossary extends React.Component<IProps, IState> {
         return <section className={classNames.join(' ')}>
             {abstract}
             {languages.map(
-                (language) => <Language key={language.id} language={language}
-                    glosses={this.props.glosses[language.id]} onReferenceLinkClick={this._onReferenceClick} />,
+                (language) => <GlossaryLanguage key={language.id} language={language}
+                    glosses={this.props.sections[language.id]} onReferenceLinkClick={this._onReferenceClick} />,
             )}
         </section>;
-    }
-
-    /**
-     * Initializes the component with the glossary supplied to it from the server. This is
-     * a common scenario when the client reloads the browser (and consequently loses JS in-memory state).
-     * In this scenario, the server will provide the glossary for the page that was just loaded, and the
-     * JavaScript client is responsible to pick it up and use it to restore its previous in-memory state.
-     */
-    private _initializePreloadedGlossary() {
-        const preloadedGlossary = this._getPreloadedGlossary();
-        if (preloadedGlossary === null) {
-            return;
-        }
-
-        this.props.dispatch(
-            this._actions.setGlossary(preloadedGlossary),
-        );
-    }
-
-    /**
-     * Gets the text content of an arbitrary element with the id `ed-preloaded-book` and deserializes
-     * it using the JSON serializer. The element is expected to contain a full glossary API request
-     * response.
-     */
-    private _getPreloadedGlossary() {
-        const stateContainer = document.getElementById('ed-preloaded-book');
-        if (!stateContainer) {
-            return null;
-        }
-
-        try {
-            const glossary = JSON.parse(stateContainer.textContent);
-
-            // The glossary is preloaded by the server, so its properties are `snake_case`.
-            // Consequently, we must convert them to `camelCase` which is recognised by the view.
-            return snakeCasePropsToCamelCase<any>(glossary);
-        } catch (e) {
-            // We do not really care about these errors -- just silence the exception when
-            // the format is unrecognised.
-            console.warn(e);
-            return null;
-        }
-    }
-
-    /**
-     * Sets an internal reference to the current element representing the glossary container.
-     */
-    private _setGlossaryContainerRef = (elem: HTMLDivElement) => {
-        this._glossaryContainerRef = elem;
-    }
-
-    /**
-     * Removes an element with the id `ed-book-for-bots` which is a partial server-side rendering
-     * of the glossary intended for search indexing purposes.
-     */
-    private _removeGlossaryForBots() {
-        // has the server added a glossary intended for bots (such as Google)?
-        // remove them, if such is the case:
-        const glossaryForBots = document.getElementById('ed-book-for-bots');
-        if (glossaryForBots) {
-            glossaryForBots.parentElement.removeChild(glossaryForBots);
-        }
     }
 
     /**
@@ -234,8 +183,8 @@ export class Glossary extends React.Component<IProps, IState> {
     private _onGlobalListenerReferenceLoad = (ev: CustomEvent) => {
         // go to the top of the page to ensure that the client understands that the glossary
         // is being reloaded.
-        if (this._glossaryContainerRef) {
-            makeVisibleInViewport(this._glossaryContainerRef);
+        if (this._glossaryContainerRef.current) {
+            makeVisibleInViewport(this._glossaryContainerRef.current);
         } else {
             window.scrollTo(0, 0);
         }
@@ -269,14 +218,3 @@ const FixedBouncingArrow = (props: any) => <React.Suspense fallback={null}>
         <BouncingArrowAsync {...props} />
     </div>
 </React.Suspense>;
-
-const mapStateToProps = (state: RootReducer) => ({
-    ...state.glossary,
-
-    glosses: state.glosses,
-    isEmpty: state.languages.isEmpty,
-    languages: state.languages.common,
-    unusualLanguages: state.languages.unusual,
-});
-
-export default connect(mapStateToProps)(Glossary);

@@ -1,20 +1,20 @@
 import { Actions } from '../actions';
-import { IGlossaryAction } from './GlossaryReducer._types';
+import { IEntitiesAction } from './EntitiesReducer._types';
 import { ILanguagesState } from './LanguagesReducer._types';
 
 const LanguagesReducer = (state: ILanguagesState = {
     common: [],
     isEmpty: true,
     unusual: [],
-}, action: IGlossaryAction) => {
+}, action: IEntitiesAction) => {
     switch (action.type) {
-        case Actions.ReceiveGlossary:
+        case Actions.ReceiveEntities:
             return {
-                common: action.glossary.sections //
+                common: action.entities.sections //
                     .filter((section) => !section.language.isUnusual) //
                     .map((section) => section.language),
-                isEmpty: action.glossary.sections.length === 0,
-                unusual: action.glossary.sections //
+                isEmpty: action.entities.sections.length === 0,
+                unusual: action.entities.sections //
                     .filter((section) => section.language.isUnusual) //
                     .map((section) => section.language),
             };

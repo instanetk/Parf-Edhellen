@@ -4,12 +4,13 @@ import { ThunkDispatch } from 'redux-thunk';
 
 import IBookApi, {
     IFindEntity,
-    IGlossaryRequest,
-    IGlossaryResponse,
     ILanguageEntity,
+    IEntitiesRequest,
+    IEntitiesResponse,
+    ISearchGroups,
 } from '@root/connectors/backend/IBookApi';
 import ILanguageApi from '@root/connectors/backend/ILanguageApi';
-import { SearchResultGroups } from '@root/config';
+import { SearchResultGlossaryGroupId } from '@root/config';
 import GlobalEventConnector from '@root/connectors/GlobalEventConnector';
 import { DI, resolve } from '@root/di';
 import { stringHashAll } from '@root/utilities/func/hashing';
@@ -28,7 +29,7 @@ import {
 } from '../reducers/SearchResultsReducer._types';
 import {
     IBrowserHistoryState,
-    ILoadGlossaryAction,
+    IExpandSearchResultAction,
 } from './SearchActions._types';
 
 export default class SearchActions {
@@ -48,32 +49,34 @@ export default class SearchActions {
                 ...args,
             });
 
-            let results: Map<string, ISearchResult[]> = new Map();
+            let keywords = new Map<string, ISearchResult[]>();
+            let searchGroups: ISearchGroups = {};
             if (typeof args.word === 'string' && args.word.length > 0) {
                 try {
                     const rawResults = await this._api.find(args);
+
                     // generate a unique ID for each result item. We need to use an counter since
                     // the keyword and the normalized keyword both may not be unique.
-                    results = mapArrayGroupBy<IFindEntity, ISearchResult>({
+                    keywords = mapArrayGroupBy<IFindEntity, ISearchResult>({
                         groupId: 'g',
                         id: (v) => stringHashAll(v.k, v.nk, v.ok, v.g.toString(10)),
                         normalizedWord: 'nk',
                         originalWord: 'ok',
                         word: 'k',
-                    }, rawResults, (v) => {
-                        const groupId: keyof typeof SearchResultGroups = v.g.toString(10) as any;
-                        if (! SearchResultGroups.hasOwnProperty(groupId)) {
-                            return SearchResultGroups['0'];
-                        }
-
-                        return SearchResultGroups[groupId];
+                    }, rawResults.keywords, (v) => {
+                        return rawResults.searchGroups[v.g] || `Unknown #${v.g}`;
                     });
+
+                    searchGroups = rawResults.searchGroups;
                 } catch (e) {
                     console.warn(e);
                 }
             }
 
-            dispatch(this.setSearchResults(results));
+            dispatch(this.setSearchResults({
+                keywords,
+                searchGroups,
+            }));
         };
     }
 
@@ -123,13 +126,17 @@ export default class SearchActions {
             }
 
             const searchResult = resultsById[resultIds[selectedIndex]];
-
+            if (!searchResult) {
+                // Do nothing if the search result doesn't exist.
+                console.warn(`Trying to expand a non-existant search result for ${selectedIndex}.`);
+                return;
+            }
             const args = {
                 searchResult,
                 updateBrowserHistory: true,
             };
 
-            await this.glossary(args)(dispatch, getState);
+            await this.expandSearchResult(args)(dispatch, getState);
         };
     }
 
@@ -152,17 +159,28 @@ export default class SearchActions {
     }
 
     /**
-     * Loads the glossary for the specified search result.
-     * @param args
+     * Loads entities asspcoated with the specified arguments, including (but not necessarily related to) the glossary.
+     * @param args Search action arguments
      */
-    public glossary(args: ILoadGlossaryAction) {
+    public expandSearchResult(args: IExpandSearchResultAction) {
+        const {
+            searchResult,
+            updateBrowserHistory,
+        } = args;
+
         return async (dispatch: ThunkDispatch<any, any, any>, getState: () => RootReducer) => {
             const state = getState();
 
-            let glossGroupIds = state.search.glossGroupIds;
-            let includeOld    = state.search.includeOld;
-            let languageId    = state.search.languageId;
-            let speechIds     = state.search.speechIds;
+            let {
+                glossGroupIds,
+                includeOld,
+                languageId,
+                speechIds,
+            } = state.search;
+
+            const {
+                groupIdMap,
+            } = state.searchResults;
 
             if (args.glossGroupIds !== undefined) {
                 glossGroupIds = args.glossGroupIds;
@@ -180,8 +198,7 @@ export default class SearchActions {
                 speechIds = args.speechIds;
             }
 
-            const word = args.searchResult.originalWord || //
-                args.searchResult.word;
+            const word = args.searchResult.word;
 
             let language: ILanguageEntity = null;
             let languageShortName: string = null;
@@ -191,19 +208,69 @@ export default class SearchActions {
                 languageShortName = language.shortName;
             }
 
+            const request: IEntitiesRequest = {
+                data: {
+                    glossGroupIds,
+                    includeOld,
+                    inflections: true,
+                    languageId,
+                    normalizedWord: args.searchResult.normalizedWord,
+                    speechIds,
+                    word,
+                },
+                groupId: searchResult.groupId,
+            };
+
+            const {
+                address,
+                title,
+            } = this._prepareAddress(request, groupIdMap, languageShortName);
+
+            // When navigating using the browser's back and forward buttons,
+            // the state needn't be modified.
+            if (updateBrowserHistory && window.history.pushState) {
+                const nextState: IBrowserHistoryState = {
+                    glossary: true,
+                    languageShortName,
+                    groupId: searchResult.groupId,
+                    normalizedWord: searchResult.normalizedWord,
+                    word: searchResult.word,
+                };
+                window.history.pushState(nextState, title, address);
+            }
+
+            // because most browsers doesn't change the document title when pushing state
+            document.title = title;
+
+            this._globalEvents.fire(this._globalEvents.loadEntity, {
+                detail: {
+                    address,
+                    groupId: searchResult.groupId,
+                    languageId: language?.id,
+                    word: searchResult.word,
+                },
+            });
+
+            // DEPRECATED: Inform indirect listeners about the navigation. Kept for backwards compatibility.
+            if (searchResult.groupId === SearchResultGlossaryGroupId) {
+                this._globalEvents.fire(this._globalEvents.loadGlossary, {
+                    detail: {
+                        address,
+                        languageId: args.languageId,
+                        word,
+                    },
+                });
+            }
+
             dispatch(this.selectSearchResult(args.searchResult));
 
-            const request = {
-                glossGroupIds,
-                includeOld,
-                inflections: true,
-                languageId,
-                normalizedWord: args.searchResult.normalizedWord,
-                speechIds,
-                word,
-            };
-            await this._loadGlossary(dispatch, request, languageShortName, args.updateBrowserHistory);
-        };
+            dispatch({
+                groupId: args.searchResult.groupId,
+                type: Actions.RequestEntities,
+            });
+            const entities = await this._api.entities(request);
+            dispatch(this.setEntities(entities));
+        }
     }
 
     /**
@@ -212,7 +279,7 @@ export default class SearchActions {
     public reloadGlossary() {
         return async (dispatch: ThunkDispatch<any, any, any>, getState: () => RootReducer) => {
             const {
-                glossary,
+                entities,
                 search,
                 searchResults,
             } = getState();
@@ -222,7 +289,7 @@ export default class SearchActions {
             } = searchResults;
 
             // Do not attempt to reload an uninitiated glossary.
-            if (glossary.word.length < 1) {
+            if (entities.word.length < 1) {
                 return;
             }
 
@@ -234,19 +301,20 @@ export default class SearchActions {
                 searchResult = resultsById[selectedId] || null;
             }
             if (searchResult === null) {
-                searchResult = Object.values(resultsById).find((r) => r.word === glossary.word) || null;
+                searchResult = Object.values(resultsById).find((r) => r.word === entities.word) || null;
             }
             if (searchResult === null) {
-                const word = glossary.word;
+                const word = entities.word;
                 searchResult = {
                     id: 0,
+                    groupId: SearchResultGlossaryGroupId,
                     normalizedWord: word,
                     originalWord: null,
                     word,
                 };
             }
 
-            await this.glossary({
+            await this.expandSearchResult({
                 ...search,
                 searchResult,
                 updateBrowserHistory: true,
@@ -255,7 +323,7 @@ export default class SearchActions {
     }
 
     /**
-     * Loads the glossary for the reference link.
+     * Loads the glossary for the reference link._expandSearchResult
      * @param word
      * @param languageShortName
      * @param updateBrowserHistory (optional) whether to invoke pushState.
@@ -269,13 +337,20 @@ export default class SearchActions {
             }
 
             const state = getState();
-            const args = {
-                includeOld: state.search.includeOld,
+            const args: IExpandSearchResultAction = {
+                ...state.search,
                 languageId,
-                normalizedWord,
-                word,
+                searchResult: {
+                    id: 0,
+                    groupId: SearchResultGlossaryGroupId,
+                    normalizedWord,
+                    originalWord: null as string,
+                    word,
+                },
+                updateBrowserHistory,
             };
-            await this._loadGlossary(dispatch, args, languageShortName, updateBrowserHistory);
+
+            this.expandSearchResult(args);
         };
     }
 
@@ -283,70 +358,65 @@ export default class SearchActions {
      * Sets the specified `glossary`.
      * @param glossary
      */
-    public setGlossary(glossary: IGlossaryResponse) {
+    public setEntities<T>(entities: IEntitiesResponse<T>) {
         return {
-            glossary,
-            type: Actions.ReceiveGlossary,
+            ...entities,
+            type: Actions.ReceiveEntities,
         };
     }
 
-    private async _loadGlossary(dispatch: ThunkDispatch<any, any, any>, args: IGlossaryRequest,
-        languageShortName: string = null, updateBrowserHistory: boolean = true) {
-        const uriEncodedWord = encodeURIComponent(args.normalizedWord);
-        const capitalizedWord = capitalize(args.word);
+    private _prepareAddress(args: IEntitiesRequest, groupIdMap: ISearchGroups, languageShortName: string = null) {
+        const {
+            groupId,
+        } = args;
 
-        // Browser specific: build the browser's new title and its new address.
-        const title = `${capitalizedWord} - Parf Edhellen`;
-        let address = `/w/${uriEncodedWord}` + (languageShortName ? `/${languageShortName}` : '');
+        const {
+            normalizedWord,
+            word,
+        } = args.data;
+
+        const uriEncodedWord = encodeURIComponent(normalizedWord);
+        const capitalizedWord = capitalize(word);
+
+        let title: string;
+        let address: string;
+
+        // DEPRECATED: special rule for glossary.
+        if (groupId === SearchResultGlossaryGroupId) {
+            // Browser specific: build the browser's new title and its new address.
+            title = `${capitalizedWord} - Parf Edhellen`;
+            address = `/w/${uriEncodedWord}` + (languageShortName ? `/${languageShortName}` : '');
+        } else {
+            const groupName = groupIdMap[groupId]?.toLocaleLowerCase() || 'entity';
+            title = `${capitalizedWord} - Parf Edhellen`;
+            address = `/e/${groupName}-${groupId}/${uriEncodedWord}` + (languageShortName ? `/${languageShortName}` : '');
+        }
 
         // embellish the address with configuration values that are not supported by the native URL format
-        const GlossaryUrlSupportedConfiguration: (keyof IGlossaryRequest)[] = [
-            'inflections', 'languageId', 'normalizedWord', 'word',
+        const supportedSettings: (keyof typeof args.data)[] = [
+            'glossGroupIds', 'includeOld', 'speechIds',
         ];
-        const unsupportedConfigs = Object.keys(args) //
-            .filter((key: keyof IGlossaryRequest) => {
-                // Filter out all supported configurations
-                return ! GlossaryUrlSupportedConfiguration.includes(key);
-            }).reduce((carry: any, key: keyof IGlossaryRequest) => {
-                const value = args[key];
-                // tslint:disable-next-line: no-bitwise
-                carry[toSnakeCase(key)] = typeof value === 'boolean' ? ~~value : value;
-                return carry;
-            }, {});
 
-        if (Object.keys(unsupportedConfigs).length > 0) {
-            address += '?' + queryString.stringify(unsupportedConfigs, {
+        const settings: { [key: string]: any } = {};
+        let noOfSettings = 0;
+        for (const setting of supportedSettings) {
+            const value = args.data[setting];
+            // tslint:disable-next-line: no-bitwise
+            settings[toSnakeCase(setting)] = typeof value === 'boolean' ? ~~value : value;
+            noOfSettings += 1;
+        }
+
+        if (noOfSettings > 0) {
+            address += '?' + queryString.stringify(settings, {
                 arrayFormat: 'bracket',
                 skipEmptyString: true,
                 skipNull: true,
             });
         }
 
-        // When navigating using the browser's back and forward buttons,
-        // the state needn't be modified.
-        if (updateBrowserHistory && window.history.pushState) {
-            const state: IBrowserHistoryState = {
-                glossary: true,
-                languageShortName,
-                normalizedWord: args.normalizedWord,
-                word: args.word,
-            };
-            window.history.pushState(state, title, address);
+        return {
+            address,
+            title,
         }
-
-        // because most browsers doesn't change the document title when pushing state
-        document.title = title;
-
-        // Inform indirect listeners about the navigation
-        this._globalEvents.fire(this._globalEvents.loadGlossary, {
-            detail: {
-                address,
-                languageId: args.languageId,
-                word: args.word,
-            },
-        });
-
-        const glossary = await this._api.glossary(args);
-        dispatch(this.setGlossary(glossary));
     }
 }

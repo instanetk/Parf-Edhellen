@@ -6,6 +6,7 @@ export const ApplicationGlobalPrefix = 'ed';
 export const LocalStorageLanguages = 'ed.languages';
 
 export const GlobalEventLoadGlossary = 'ednavigate';
+export const GlobalEventLoadEntity = 'ednavigate-entity';
 export const GlobalEventLoadReference = 'edref';
 
 export const GlobalAdsConfigurationName = 'ed.ads.config';
@@ -20,13 +21,7 @@ export const GlaemscribeModeMappings: { [mode: string]: string } = {
     'westron': 'westron-tengwar-glaemscrafu',
 };
 
-// See SearchKeyword.php
-export const SearchResultGroups = {
-    '0': 'Unassigned',
-    '1': 'Glossary',
-    '2': 'Phrases',
-    '3': 'Discuss',
-};
+export const SearchResultGlossaryGroupId = 1;
 
 export const LearnMoreMarkdownUrl = 'https://en.wikipedia.org/wiki/Markdown';
 export const LearnMoreWebFeedUrl = 'https://en.wikipedia.org/wiki/Web_feed';

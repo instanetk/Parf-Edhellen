@@ -3,32 +3,34 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Language;
-use App\Http\Controllers\Traits\{
-    CanGetLanguage,
-    CanTranslate, 
-    CanGetGloss
-};
+use App\Models\SearchKeyword;
+use App\Http\Controllers\Abstracts\BookBaseController;
+use App\Http\Controllers\Traits\CanGetLanguage;
 
-class BookController extends Controller
+class BookController extends BookBaseController
 {
-    use CanTranslate, CanGetGloss, CanGetLanguage {
-        CanTranslate::__construct insteadof CanGetGloss;
-    } // ;
+    use CanGetLanguage;
 
     public function pageForWord(Request $request, string $word, string $language = null)
     {
-        $this->validateGetGlossConfiguration($request);
+        return $this->pageForEntity($request, '', SearchKeyword::SEARCH_GROUP_DICTIONARY, $word, $language);
+    }
 
-        $language     = $this->getLanguageByShortName($language);
-        $includeOld   = $request->has('include_old')     ? $request->input('include_old') : true;
-        $glossGroupId = $request->has('gloss_group_ids') ? $request->input('gloss_group_ids') : null;
-        $speechIds    = $request->has('speech_ids')      ? $request->input('speech_ids') : null;
+    public function pageForEntity(Request $request, string $groupName, string $groupId, string $word, string $language = null)
+    {
+        $languageId = 0;
+        if ($language !== null) {
+            $language = $this->getLanguageByShortName($language);
+            if ($language !== null) {
+                $languageId = $language->id;
+            }
+        }
 
-        $model = $this->translate($word, $language ? $language->id : 0, true, $includeOld, $speechIds, $glossGroupId);
+        $v = $this->validateFindRequest($request, ['word' => $word, 'language_id' => $languageId]);
+        $entities = $this->_searchIndexRepository->resolveIndexToEntities($groupId, $v);
 
         return view('book.page', [
-            'payload' => $model
+            'payload' => $entities
         ]);
     }
 

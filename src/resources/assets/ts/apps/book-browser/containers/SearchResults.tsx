@@ -4,16 +4,18 @@ import { connect } from 'react-redux';
 
 import { IComponentEvent } from '@root/components/Component._types';
 import StaticAlert from '@root/components/StaticAlert';
+import Cache from '@root/utilities/Cache';
 import { SearchActions } from '../actions';
 import SearchGroup from '../components/SearchGroup';
 import { RootReducer } from '../reducers';
 import { ISearchResult } from '../reducers/SearchResultsReducer._types';
 import { IProps } from './SearchResults._types';
-import Cache from '@root/utilities/Cache';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 export class SearchResults extends React.Component<IProps> {
     static get defaultProps() {
         return {
+            loading: true,
             searchGroups: [],
             searchResults: [],
             selectedResultId: 0,
@@ -59,6 +61,7 @@ export class SearchResults extends React.Component<IProps> {
         }
 
         const {
+            loading,
             searchGroups,
             searchResults,
             selectedResultId,
@@ -70,13 +73,13 @@ export class SearchResults extends React.Component<IProps> {
 
         const searchResultContainerStyles = classNames(
             'panel-body', 'results-panel',
-            { hidden: searchResults.length < 1 },
+            { hidden: searchResults.length < 1 && !loading },
         );
         const noSearchResultsStyles = classNames('panel-body', 'results-empty',
-            { hidden: searchResults.length > 0 },
+            { hidden: searchResults.length > 0 || loading },
         );
-        const navigatorStyles = classNames('row', 'search-result-navigator',
-            { hidden: searchResults.length < 2 },
+        const navigatorStyles = classNames('search-result-navigator',
+            { hidden: searchResults.length < 1 },
         );
 
         return <section>
@@ -91,6 +94,7 @@ export class SearchResults extends React.Component<IProps> {
                         These words match <strong>{this.props.word}</strong>. Click on the one most relevant to you,
                         or simply press enter to go to the first result in the list.
                     </StaticAlert>}
+                    {loading && <LoadingIndicator text="Browsing the dictionary..." />}
                     {searchGroups.map((group, i) => <SearchGroup
                         groupName={group}
                         onClick={this._onClick}
@@ -98,24 +102,24 @@ export class SearchResults extends React.Component<IProps> {
                         searchResults={searchResults[i]}
                         selectedResultId={selectedResultId}
                     />)}
+                    <div className={navigatorStyles}>
+                        <nav>
+                            <ul className="pager">
+                                <li className="previous">
+                                    <a href="#" onClick={this._onPreviousSearchResult}>&larr; Previous</a>
+                                </li>
+                                <li className="next">
+                                    <a href="#" onClick={this._onNextSearchResult}>Next &rarr;</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
                 <div className={noSearchResultsStyles}>
                     <StaticAlert type="warning">
                         The dictionary unfortunately does not contain words that match <strong>{this.props.word}</strong>. Have you tried a synonym or perhaps even an antonym?
                     </StaticAlert>
                 </div>
-            </div>
-            <div className={navigatorStyles}>
-                <nav>
-                    <ul className="pager">
-                        <li className="previous">
-                            <a href="#" onClick={this._onPreviousSearchResult}>&larr; Previous</a>
-                        </li>
-                        <li className="next">
-                            <a href="#" onClick={this._onNextSearchResult}>Next &rarr;</a>
-                        </li>
-                    </ul>
-                </nav>
             </div>
         </section>;
     }
@@ -125,10 +129,16 @@ export class SearchResults extends React.Component<IProps> {
      * for the specified search result.
      */
     private _onClick = (ev: IComponentEvent<ISearchResult>) => {
-        this.props.dispatch(this._actions.glossary({
-            searchResult: ev.value,
+        const {
+            dispatch,
+        } = this.props;
+        const searchResult = ev.value;
+        const payload = {
+            searchResult,
             updateBrowserHistory: true,
-        }));
+        };
+        dispatch(this._actions.expandSearchResult(payload));
+        this._onDismissInstructions();
     }
 
     private _onDismissInstructions = () => {
@@ -151,6 +161,7 @@ export class SearchResults extends React.Component<IProps> {
 }
 
 const mapStateToProps = (state: RootReducer): IProps => ({
+    loading: state.search.loading,
     searchGroups: state.searchResults.groups,
     searchResults: state.searchResults.resultsByGroupIndex,
     selectedResultId: state.searchResults.selectedId,

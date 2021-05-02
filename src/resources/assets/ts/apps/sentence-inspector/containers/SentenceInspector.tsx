@@ -2,7 +2,6 @@ import React from 'react';
 import { connect } from 'react-redux';
 
 import { IComponentEvent } from '@root/components/Component._types';
-import TextIcon from '@root/components/TextIcon';
 import IBookApi, { IBookGlossEntity } from '@root/connectors/backend/IBookApi';
 import { DI, resolve } from '@root/di';
 
@@ -107,7 +106,7 @@ export class SentenceInspector extends React.Component<IProps, IState> {
 
         try {
             const details = await this._api.gloss(fragment.glossId);
-            gloss = details.sections[0].glosses[0];
+            gloss = details.sections[0].entities[0];
             gloss.inflectedWord = {
                 inflections: fragment.inflections,
                 speech: fragment.speech,

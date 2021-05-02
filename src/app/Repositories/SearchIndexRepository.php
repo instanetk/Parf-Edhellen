@@ -4,6 +4,11 @@ namespace App\Repositories;
 
 use App\Helpers\StringHelper;
 use App\Models\Initialization\Morphs;
+use App\Repositories\SearchIndexResolvers\{
+    GlossSearchIndexResolver,
+    KeywordsSearchIndexResolver
+};
+use App\Repositories\ValueObjects\SearchIndexSearchValue;
 use App\Models\{
     Gloss,
     ForumPost,
@@ -13,19 +18,25 @@ use App\Models\{
     Word
 };
 
+use DB;
 
 class SearchIndexRepository 
 {
-    public function __construct()
-    {
+    private static $_resolvers = null;
+    private $_keywordsResolver;
 
+    public function __construct(KeywordsSearchIndexResolver $keywordsResolver)
+    {
+        $this->_keywordsResolver = $keywordsResolver;
     }
 
-    public function createIndex(ModelBase $model, Word $word, string $inflection = null): SearchKeyword
+    public function createIndex(ModelBase $model, Word $wordEntity, string $inflection = null): SearchKeyword
     {
         $entityName   = Morphs::getAlias($model);
         $entityId     = $model->id;
-        $keyword      = empty($inflection) ? $word->word : $inflection;
+        $word         = StringHelper::toLower(StringHelper::clean($wordEntity->word));
+        $inflection   = StringHelper::toLower(StringHelper::clean($inflection));
+        $keyword      = empty($inflection) ? $word : $inflection;
         $glossGroupId = null;
 
         $isOld = false;
@@ -58,8 +69,8 @@ class SearchIndexRepository
             'entity_name'    => $entityName,
             'entity_id'      => $entityId,
             'is_old'         => $isOld,
-            'word'           => $word->word,
-            'word_id'        => $word->id,
+            'word'           => $word,
+            'word_id'        => $wordEntity->id,
 
             'search_group'   => $this->getSearchGroup($entityName)
         ];
@@ -81,21 +92,63 @@ class SearchIndexRepository
         ])->delete();
     }
 
+    public function findKeywords(SearchIndexSearchValue $v)
+    {
+        $keywords = $this->_keywordsResolver->resolve($v);
+        return $keywords;
+    }
+
+    public function resolveIndexToEntities(int $searchGroupId, SearchIndexSearchValue $v)
+    {
+        $entityName = $this->getEntityNameFromSearchGroup($searchGroupId);
+
+        $config = config('ed.book_entities');
+        $resolverName = $config[$entityName]['resolver'];
+        $intlName = $config[$entityName]['intl_name'];
+        $entities = resolve($resolverName)->resolve($v);
+
+        $single = count($entities) === 1;
+        $word   = $v->getWord();
+
+        // DEPRECATED START: Backwards compatibility for the BookAdapter for the glossary
+        if (array_key_exists('single', $entities)) {
+            $single = $entities['single'];
+            unset($entities['single']);
+        }
+
+        if (array_key_exists('word', $entities)) {
+            $word = $entities['word'];
+            unset($entities['word']);
+        }
+        // DEPRECATED END
+
+        return [
+            'entities'        => $entities,
+            'group_id'        => $searchGroupId,
+            'group_intl_name' => $intlName,
+            'single'          => $single,
+            'word'            => $word
+        ];
+    }
+
     private function getSearchGroup(string $entityName): int
     {
         $morpedModel = Morphs::getMorphedModel($entityName);
-        if ($morpedModel === Gloss::class) {
-            return SearchKeyword::SEARCH_GROUP_DICTIONARY;
-        }
-
-        if ($morpedModel === ForumPost::class) {
-            return SearchKeyword::SEARCH_GROUP_FORUM_POST;
-        }
-
-        if ($morpedModel === SentenceFragment::class) {
-            return SearchKeyword::SEARCH_GROUP_SENTENCE;
+        $config = config('ed.book_entities');
+        if (isset($config[$morpedModel])) {
+            return $config[$morpedModel]['group_id'];
         }
 
         throw new \Exception(sprintf('Unrecognised search group for %s and %s.', $entityName, $morpedModel));
+    }
+
+    private function getEntityNameFromSearchGroup(int $searchGroupId): ?string
+    {
+        $config = config('ed.book_group_id_to_book_entities');
+        if (isset($config[$searchGroupId])) {
+            return $config[$searchGroupId];
+        }
+
+        throw new \Exception(sprintf('Unrecognised search group %d.', $searchGroupId));
     }
 }
