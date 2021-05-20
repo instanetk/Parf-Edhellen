@@ -76,14 +76,4 @@ describe('apps/book-browser/containers/GlossaryEntities', () => {
             languages.unusual.length + languages.common.length,
         );
     });
-<<<<<<< HEAD
-=======
-
-    it('should not render because word is empty', () => {
-        wrapper.setProps({ isEmpty: true });
-
-        expect(wrapper.isEmptyRender()).to.be.false;
-        expect(wrapper.text()).to.contain('Alas! What you are looking for does not exist!');
-    });
->>>>>>> f8c0ecf16259fcb62080fe7aa16a585bd1d3da70
 });
