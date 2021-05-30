@@ -49,7 +49,6 @@ class ProcessGlossImport implements ShouldQueue
 
         try {
             $importedGloss = $glossRepository->saveGloss($word, $sense, $gloss, $translations, $keywords, $details, false);
-            $importedGloss->load('word', 'sense', 'gloss_group');
         } catch (\Exception $ex) {
             throw $ex;
         }
