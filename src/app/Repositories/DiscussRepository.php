@@ -32,6 +32,7 @@ use App\Repositories\ValueObjects\{
     ForumPostsInThreadValue,
     ForumThreadForEntityValue,
     ForumThreadMetadataValue,
+    ForumThreadsForPostsValue,
     ForumThreadsInGroupValue,
     ForumThreadValue
 };
@@ -182,6 +183,44 @@ class DiscussRepository
         return new ForumThreadValue([
             'context' => $context,
             'thread'  => $thread
+        ]);
+    }
+
+    public function getThreadsForPosts(array $postIds)
+    {
+        $postIdAndThreadId = ForumPost::whereIn('id', $postIds) //
+            ->select('forum_thread_id', 'id') //
+            ->distinct() //
+            ->get();
+
+        $threadIds = $postIdAndThreadId->pluck('forum_thread_id');
+        $threads = ForumThread::whereIn('forum_threads.id', $threadIds)
+            ->join('accounts', 'accounts.id', 'forum_threads.account_id') //
+            ->distinct() //
+            ->select(
+                'forum_threads.id', 'forum_threads.subject', 'forum_threads.updated_at', 'forum_threads.created_at',
+                'forum_threads.number_of_posts', 'forum_threads.number_of_likes', 'forum_threads.normalized_subject',
+                'forum_threads.forum_group_id', 'forum_threads.account_id', 'accounts.nickname as account_name',
+                'accounts.has_avatar')
+            ->get() //
+            ->keyBy('id');
+
+        $groupIds = $threads->values()->pluck('forum_group_id');
+        $groups = ForumGroup::whereIn('id', $groupIds) //
+            ->distinct() //
+            ->get()
+            ->keyBy('id');
+
+        $threadsWithPosts = $postIdAndThreadId->map(function($data) use($threads) {
+            $thread = clone $threads[$data->forum_thread_id];
+            $thread->forum_post_id = $data->id;
+
+            return $thread;
+        });
+
+        return new ForumThreadsForPostsValue([
+            'forum_threads' => $threadsWithPosts,
+            'forum_groups'  => $groups
         ]);
     }
 

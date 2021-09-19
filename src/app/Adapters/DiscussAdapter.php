@@ -12,19 +12,26 @@ use App\Models\{
     ForumPost,
     ForumThread
 };
-use App\Helpers\StorageHelper;
+use App\Repositories\ValueObjects\ForumThreadsForPostsValue;
+use App\Helpers\{
+    LinkHelper,
+    StorageHelper
+};
 
 class DiscussAdapter
 {
     private $_contextFactory;
     private $_storageHelper;
     private $_authManager;
+    private $_linkHelper;
 
-    public function __construct(ContextFactory $contextFactory, StorageHelper $storageHelper, AuthManager $authManager)
+    public function __construct(ContextFactory $contextFactory, StorageHelper $storageHelper, AuthManager $authManager,
+        LinkHelper $linkHelper)
     {
         $this->_contextFactory = $contextFactory;
         $this->_storageHelper = $storageHelper;
         $this->_authManager = $authManager;
+        $this->_linkHelper = $linkHelper;
     }
 
     public function adaptAccount(Account $account)
@@ -141,5 +148,41 @@ class DiscussAdapter
         }
 
         return $adapted;
+    }
+
+    public function adaptForSearchResults(ForumThreadsForPostsValue $value)
+    {
+        $sections = [];
+        foreach ($value->getThreads() as $t) {
+            $thread = clone $t;
+
+            $groupId = $thread->forum_group_id;
+            $group = $value->getGroups()[$groupId];
+
+            $author = new Account();
+            $author->id = $thread->account_id;
+            $author->has_avatar = $thread->has_avatar;
+            $thread->account_avatar_path = $this->_storageHelper->accountAvatar($author);
+            $thread->account_path = $this->_linkHelper->author($thread->account_id, $thread->account_name);
+
+            $thread->thread_path = $this->_linkHelper->forumThread(
+                $groupId, $group->name, $thread->id, $thread->normalized_subject,
+                $thread->forum_post_id
+            );
+
+            if (isset($sections[$groupId])) {
+                $sections[$groupId]['entities'][] = $thread;
+
+            } else {
+                $sections[$groupId] = [
+                    'entities' => [ $thread ],
+                    'language' => $group
+                ];
+            }
+        }
+
+        return [
+            'sections' => array_values($sections)
+        ];
     }
 }
